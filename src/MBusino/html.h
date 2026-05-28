@@ -79,6 +79,10 @@ const char index_html[] PROGMEM = R"rawliteral(
         </select>  stored: %u <br><br>             
         <div class='form-floating'><label>Sensor publish interval sec.</label><input type='text' value='%u' class='form-control' name='sensorInterval'></div>
         <div class='form-floating'><label>M-Bus publish interval sec.</label><input type='text' value='%u' class='form-control' name='mbusInterval'></div>
+
+		<div class='form-floating'><label>M-Bus Daten entschlüsseln (OMS Mode 5):</label><input type="checkbox" id="decrypt_enabled" name="decrypt_enabled" %DECRYPT_CHECKED%>
+		<div class='form-floating'><label for="aes_key">AES-128 Key (32-stelliger Hex-Code):</label><input type="text" id="aes_key" name="aes_key" value="%AES_KEY_VAL%" maxlength="32" placeholder="00112233445566778899AABBCCDDEEFF">
+
         <div class='form-floating'><label>MQTT Broker</label><input type='text' value='%s' class='form-control' maxlength = '64' name='broker'></div>
         <div class='form-floating'><label>MQTT Port</label><input type='text' value='%u' class='form-control' name='mqttPort'></div>
         <div class='form-floating'><label>MQTT User (optional)</label><input type='text' value='%s' class='form-control' maxlength = '64' name='mqttUser'></div>
