@@ -25,6 +25,7 @@ You should have received a copy of the GNU General Public License along with thi
 #include <MBusCom.h>  // Library M-Bus communication
 #include <ArduinoJson.h>
 #include <EEPROM.h>
+#include "mbedtls/aes.h"
 
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
@@ -207,6 +208,72 @@ uint16_t pulseInterval = 1000;
 #if defined(ESP32)
 #include "networkEvents.h"
 #endif
+
+// Hilfsfunktionen für die Hex-Konvertierung
+uint8_t hexToNibble(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return 0;
+}
+
+void hexStringToBytes(const char* hex, uint8_t* bytes) {
+    for (int i = 0; i < 16; i++) {
+        bytes[i] = (hexToNibble(hex[i * 2]) << 4) | hexToNibble(hex[i * 2 + 1]);
+    }
+}
+
+// Entschlüsselung für OMS Modus 5 (AES-128 CBC)
+bool decryptZennerFrame(uint8_t* buffer, size_t len, const char* keyHex) {
+    if (buffer[0] != 0x68 || len < 34) return false;
+
+    uint8_t key[16];
+    hexStringToBytes(keyHex, key);
+
+    // Initialisierungsvektor (IV) nach OMS Modus 5 dynamisch aufbauen
+    uint8_t iv[16];
+    
+    // 1. Teil des IV: Hersteller, ID, Version, Medium (Bytes 7 bis 14 im M-Bus Frame)
+    for (int i = 0; i < 8; i++) {
+        iv[i] = buffer[7 + i]; 
+    }
+    
+    // 2. Teil des IV: Access Number (Byte 15) und Status (Byte 16)
+    // Wird 4-mal wiederholt, um die restlichen 8 Bytes des 16-Byte-IV zu füllen
+    uint8_t access_num = buffer[15];
+    uint8_t status = buffer[16];
+    for (int i = 0; i < 4; i++) {
+        iv[8 + (i * 2)] = access_num;
+        iv[9 + (i * 2)] = status;
+    }
+
+    // Verschlüsselter Block beginnt nach dem Configuration Field (ab Byte 19)
+    int cryptoStartOffset = 19; 
+    int encryptedLen = len - cryptoStartOffset - 2; // Ohne Checksumme und Stop-Byte
+
+    if (encryptedLen % 16 != 0 || encryptedLen <= 0) return false;
+
+    uint8_t* decryptedPart = (uint8_t*)malloc(encryptedLen);
+    if (!decryptedPart) return false;
+
+    // ESP32 Hardware-Krypto initialisieren
+    mbedtls_aes_context aes;
+    mbedtls_aes_init(&aes);
+    mbedtls_aes_setkey_dec(&aes, key, 128);
+    
+    int result = mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_DECRYPT, encryptedLen, iv, &buffer[cryptoStartOffset], decryptedPart);
+    mbedtls_aes_free(&aes);
+
+    if (result == 0) {
+        // Überschreibe verschlüsselte Bytes im Originalbuffer mit Klartext
+        memcpy(&buffer[cryptoStartOffset], decryptedPart, encryptedLen);
+        free(decryptedPart);
+        return true;
+    }
+
+    free(decryptedPart);
+    return false;
+}
 
 void setup() {
   #if defined(ESP32)
@@ -549,6 +616,32 @@ void loop() {
           bool mbus_good_frame = false;
           byte mbus_data[MBUS_MAX_TELEGRAM_LEN] = { 0 };
           mbus_good_frame = mbus.get_response(mbus_data, sizeof(mbus_data));
+
+            // ... nach mbus_good_frame = mbus.get_response(mbus_data, sizeof(mbus_data));
+          if (mbus_good_frame) {
+          // ==========================================
+          // NEU: HIER DIE ENTSCHLÜSSELUNG EINBAUEN
+          // ==========================================
+            if(userData.decrypt_enabled) { // Beispiel-Flag
+              int packet_size = mbus_data[1] + 6;
+              if (decryptZennerFrame(mbus_data, packet_size, userData.aes_key)) {
+                // OMS Modus 5 Verifikations-Bytes korrigieren
+                if (mbus_data[19] == 0x2F && mbus_data[20] == 0x2F) {
+                  mbus_data[19] = 0x00;
+                  mbus_data[20] = 0x00;
+                }
+              } else {
+                // Fehlerfall: Telegramm verwerfen
+                mbusLoopStatus = 0;
+                return; 
+              }
+            }
+          }
+            // ==========================================
+            // ENDE NEUER CODE BLOCK
+            // ==========================================
+
+            // ... restlicher originaler Code (Parsing)
 
           //bool mbus_good_frame = true;
           //byte mbus_data[] = {0x68,0x9E,0x9E,0x68,0x08,0x65,0x72,0x09,0x76,0x06,0x00,0xA5,0x25,0x1D,0x02,0x02,0x00,0x00,0x00,0x85,0x40,0xAB,0xFF,0x01,0x00,0x36,0x0B,0x47,0x85,0x40,0xAB,0xFF,0x02,0x00,0x2C,0xFA,0x46,0x85,0x40,0xAB,0xFF,0x03,0x00,0x74,0xED,0x46,0x85,0x80,0x40,0xAB,0xFF,0x01,0x00,0xC0,0xE2,0x44,0x85,0x80,0x40,0xAB,0xFF,0x02,0x00,0x40,0x5A,0x45,0x85,0x80,0x40,0xAB,0xFF,0x03,0x00,0x60,0x36,0x45,0x05,0xFD,0xBA,0xFF,0x01,0x78,0xBE,0x7F,0x3F,0x05,0xFD,0xBA,0xFF,0x02,0x40,0x35,0x7E,0x3F,0x05,0xFD,0xBA,0xFF,0x03,0x53,0xB8,0x7E,0x3F,0x05,0xFD,0xC8,0xFF,0x04,0x00,0x90,0x7A,0x45,0x05,0xFD,0xC8,0xFF,0x05,0x00,0x70,0x7B,0x45,0x05,0xFD,0xC8,0xFF,0x06,0x00,0x80,0x7B,0x45,0x05,0xFD,0xD9,0xFF,0x04,0x00,0x50,0x2A,0x47,0x05,0xFF,0x5A,0x00,0x00,0xFA,0x43,0x02,0xFD,0x3A,0xC8,0x00,0x02,0xFD,0x3A,0x0A,0x00,0x0F,0x00,0x00,0x00,0x00,0x00,0x8B,0x16};
