@@ -631,9 +631,10 @@ void loop() {
                   mbus_data[20] = 0x00;
                 }
               } else {
-                // Fehlerfall: Telegramm verwerfen
+                Serial.println("Kritischer Fehler: Entschlüsselung fehlgeschlagen (Falscher Key?)");
+                // Korrektur 3: Sauberer Abbruch des aktuellen Schleifendurchlaufs
                 mbusLoopStatus = 0;
-                return; 
+                break; 
               }
             }
           }
