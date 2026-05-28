@@ -95,6 +95,24 @@ void setupServer(){
           }
       }
 
+      if (request->hasParam("decrypt_enabled")) {
+        inputMessage = request->getParam("decrypt_enabled")->value();
+        inputParam = "decrypt_enabled";
+          if(inputMessage != NULL){
+            userData.decrypt_enabled = inputMessage.toInt();
+            credentialsReceived = true;
+          }
+      }
+
+    if (request->hasParam("aes_key")) {
+        inputMessage = request->getParam("aes_key")->value();
+        inputParam = "aes_key";
+        if(inputMessage != NULL){
+          inputMessage.toCharArray(userData.aes_key, sizeof(userData.aes_key));
+          credentialsReceived = true;
+        }
+      }
+
       if (request->hasParam("mqttUser")) {
         inputMessage = request->getParam("mqttUser")->value();
         inputParam = "mqttUser";
