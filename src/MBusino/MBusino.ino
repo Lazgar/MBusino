@@ -620,37 +620,9 @@ void loop() {
           bool mbus_good_frame = false;
           byte mbus_data[MBUS_MAX_TELEGRAM_LEN] = { 0 };
           mbus_good_frame = mbus.get_response(mbus_data, sizeof(mbus_data));
-
-            // ... nach mbus_good_frame = mbus.get_response(mbus_data, sizeof(mbus_data));
-          if (mbus_good_frame) {
-          // ==========================================
-          // NEU: HIER DIE ENTSCHLÜSSELUNG EINBAUEN
-          // ==========================================
-            if(userData.decrypt_enabled) { // Beispiel-Flag
-              int packet_size = mbus_data[1] + 6;
-              if (decryptZennerFrame(mbus_data, packet_size, userData.aes_key)) {
-                // OMS Modus 5 Verifikations-Bytes korrigieren
-                if (mbus_data[19] == 0x2F && mbus_data[20] == 0x2F) {
-                  mbus_data[19] = 0x00;
-                  mbus_data[20] = 0x00;
-                }
-              } else {
-                Serial.println("Kritischer Fehler: Entschlüsselung fehlgeschlagen (Falscher Key?)");
-                // Korrektur 3: Sauberer Abbruch des aktuellen Schleifendurchlaufs
-                mbusLoopStatus = 0;
-                break; 
-              }
-            }
-          }
-            // ==========================================
-            // ENDE NEUER CODE BLOCK
-            // ==========================================
-
-            // ... restlicher originaler Code (Parsing)
-
+          
           //bool mbus_good_frame = true;
           //byte mbus_data[] = {0x68,0x9E,0x9E,0x68,0x08,0x65,0x72,0x09,0x76,0x06,0x00,0xA5,0x25,0x1D,0x02,0x02,0x00,0x00,0x00,0x85,0x40,0xAB,0xFF,0x01,0x00,0x36,0x0B,0x47,0x85,0x40,0xAB,0xFF,0x02,0x00,0x2C,0xFA,0x46,0x85,0x40,0xAB,0xFF,0x03,0x00,0x74,0xED,0x46,0x85,0x80,0x40,0xAB,0xFF,0x01,0x00,0xC0,0xE2,0x44,0x85,0x80,0x40,0xAB,0xFF,0x02,0x00,0x40,0x5A,0x45,0x85,0x80,0x40,0xAB,0xFF,0x03,0x00,0x60,0x36,0x45,0x05,0xFD,0xBA,0xFF,0x01,0x78,0xBE,0x7F,0x3F,0x05,0xFD,0xBA,0xFF,0x02,0x40,0x35,0x7E,0x3F,0x05,0xFD,0xBA,0xFF,0x03,0x53,0xB8,0x7E,0x3F,0x05,0xFD,0xC8,0xFF,0x04,0x00,0x90,0x7A,0x45,0x05,0xFD,0xC8,0xFF,0x05,0x00,0x70,0x7B,0x45,0x05,0xFD,0xC8,0xFF,0x06,0x00,0x80,0x7B,0x45,0x05,0xFD,0xD9,0xFF,0x04,0x00,0x50,0x2A,0x47,0x05,0xFF,0x5A,0x00,0x00,0xFA,0x43,0x02,0xFD,0x3A,0xC8,0x00,0x02,0xFD,0x3A,0x0A,0x00,0x0F,0x00,0x00,0x00,0x00,0x00,0x8B,0x16};
-          
 
           if(userData.telegramDebug == true){
           //------------------ only for debug, you will recieve the whole M-Bus telegram bytewise in HEX for analysis -----------------
@@ -670,6 +642,26 @@ void loop() {
             //--------------------------------------------------------------------------------------------------------------------------    
           }
           if (mbus_good_frame) {
+
+            // ==========================================
+            // NEU: HIER DIE ENTSCHLÜSSELUNG EINBAUEN
+            // ==========================================
+            if(userData.decrypt_enabled) { // Beispiel-Flag
+              int packet_size = mbus_data[1] + 6;
+              if (decryptZennerFrame(mbus_data, packet_size, userData.aes_key)) {
+                // OMS Modus 5 Verifikations-Bytes korrigieren
+                if (mbus_data[19] == 0x2F && mbus_data[20] == 0x2F) {
+                  mbus_data[19] = 0x00;
+                  mbus_data[20] = 0x00;
+                }
+              } else {
+                Serial.println("Kritischer Fehler: Entschlüsselung fehlgeschlagen (Falscher Key?)");
+                // Korrektur 3: Sauberer Abbruch des aktuellen Schleifendurchlaufs
+                mbusLoopStatus = 0;
+                break; 
+              }
+            }
+            
             if(fcb == true){ // toggle the FCB (Frame Count Bit) to signalize good response in the next request
               fcb = false;
             }else{
