@@ -114,7 +114,7 @@ struct settings {
   char aes_key[33] = ""; // 32 Hex-Zeichen + Nullterminator
   bool haAutodisc;
   bool telegramDebug;
-} userData = {"SSID","Password","MBusino","192.168.1.8",1883,5,"mqttUser","mqttPassword",5000,120000,true,false};
+} userData = {"SSID","Password","MBusino","192.168.1.8",1883,5,"mqttUser","mqttPassword",5000,120000,false,"",true,false};
 
 struct oldSettings {
   char ssid[30];
@@ -131,7 +131,7 @@ struct oldSettings {
   char aes_key[33] = ""; // 32 Hex-Zeichen + Nullterminator
   bool haAutodisc;
   bool telegramDebug;
-} oldUserData = {"SSID","Password","MBusino","192.168.1.8",1883,5,"mqttUser","mqttPassword",5000,120000,true,false};
+} oldUserData = {"SSID","Password","MBusino","192.168.1.8",1883,5,"mqttUser","mqttPassword",5000,120000,false,"",true,false};
 
 bool mqttcon = false;
 bool apMode = false;
@@ -316,7 +316,9 @@ void setup() {
     strncpy(userData.mqttUser, oldUserData.mqttUser, sizeof(userData.mqttUser) - 1);
     strncpy(userData.mqttPswrd, oldUserData.mqttPswrd, sizeof(userData.mqttPswrd) - 1);
     userData.sensorInterval= oldUserData.sensorInterval;
-    userData.mbusInterval = oldUserData.mbusInterval; 
+    userData.mbusInterval = oldUserData.mbusInterval;
+    userData.decrypt_enabled = oldUserData.decrypt_enabled;
+    strlcpy(userData.aes_key, oldUserData.aes_key, sizeof(userData.aes_key) - 1);
     userData.haAutodisc = oldUserData.haAutodisc;
     userData.telegramDebug = oldUserData.telegramDebug;
 
