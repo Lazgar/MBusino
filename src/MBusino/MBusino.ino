@@ -110,11 +110,11 @@ struct settings {
   char mqttPswrd[65]; 
   uint32_t sensorInterval;
   uint32_t mbusInterval;
-  bool decrypt_enabled = false;
-  char aes_key[33] = ""; // 32 Hex-Zeichen + Nullterminator
+  bool decrypt_enabled;
+  char aes_key[33]; // 32 Hex-Zeichen + Nullterminator
   bool haAutodisc;
   bool telegramDebug;
-} userData = {"SSID","Password","MBusino","192.168.1.8",1883,5,"mqttUser","mqttPassword",5000,120000,false,"",true,false};
+} userData = {"SSID","Password","MBusino","192.168.1.8",1883,5,"mqttUser","mqttPassword",5000,120000,false,"00112233445566778899AABBCCDDEEFF",true,false};
 
 struct oldSettings {
   char ssid[30];
@@ -127,11 +127,11 @@ struct oldSettings {
   char mqttPswrd[30]; 
   uint32_t sensorInterval;
   uint32_t mbusInterval;
-  bool decrypt_enabled = false;
-  char aes_key[33] = ""; // 32 Hex-Zeichen + Nullterminator
+  bool decrypt_enabled;
+  char aes_key[33]; // 32 Hex-Zeichen + Nullterminator
   bool haAutodisc;
   bool telegramDebug;
-} oldUserData = {"SSID","Password","MBusino","192.168.1.8",1883,5,"mqttUser","mqttPassword",5000,120000,false,"",true,false};
+} oldUserData = {"SSID","Password","MBusino","192.168.1.8",1883,5,"mqttUser","mqttPassword",5000,120000,false,"00112233445566778899AABBCCDDEEFF",true,false};
 
 bool mqttcon = false;
 bool apMode = false;
